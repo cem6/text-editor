@@ -13,7 +13,7 @@
 # define SCREEN_HEIGHT 600
 
 void updateFile(const std::string &content) {
-    std:: ofstream outfile("src/file.txt");
+    std:: ofstream outfile("README.md");
     if (!outfile.is_open()) {
         std::cout << "failed to open outfile" << std::endl;
         return;
@@ -26,7 +26,7 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "sfml fenster", sf::Style::Default);
 
     // read file
-    std::ifstream infile("src/file.txt");
+    std::ifstream infile("README.md");
     if (!infile.is_open())
         std::cout << "failed to open infile" << std::endl;
     std::string displayString; // this string will be modified when outfile is modified
