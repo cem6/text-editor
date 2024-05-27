@@ -12,8 +12,25 @@
 #define SCREEN_WIDTH 800
 # define SCREEN_HEIGHT 600
 
-void updateFile(const std::string &content) {
-    std:: ofstream outfile("README.md");
+// read input file and save it to string for instant modification
+std::string getFile(const std::string path) {
+    std::ifstream infile(path);
+    if (!infile.is_open()) {
+        std::cout << "failed to open infile" << std::endl;
+        return nullptr;
+    }
+    std::string readString;
+    std::string line;
+    while (std::getline(infile, line))
+        readString += line + "\n";
+    infile.close();
+
+    return readString;
+}
+
+// save input string (propably modified) to file
+void updateFile(const std::string path, const std::string &content) {
+    std::ofstream outfile(path);
     if (!outfile.is_open()) {
         std::cout << "failed to open outfile" << std::endl;
         return;
@@ -26,14 +43,7 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "sfml fenster", sf::Style::Default);
 
     // read file
-    std::ifstream infile("README.md");
-    if (!infile.is_open())
-        std::cout << "failed to open infile" << std::endl;
-    std::string displayString; // this string will be modified when outfile is modified
-    std::string line;
-    while (std::getline(infile, line))
-        displayString += line + "\n";
-    infile.close();
+    std::string displayString = getFile("README.md");
     
     // font
     sf::Font font;
@@ -59,11 +69,9 @@ int main() {
                 } else if (e.text.unicode == '\r' || e.text.unicode == '\n')  {
                     displayString += "\n";
                 } else {
-                    char enteredChar = static_cast<char>(e.text.unicode);
-                    displayString += enteredChar;
+                    displayString += static_cast<char>(e.text.unicode);
                 }
                 text.setString(displayString);
-                updateFile(displayString);
             }
         }
 
@@ -72,5 +80,6 @@ int main() {
         window.display();
     }
 
+    updateFile("README.md", displayString);
     std::cout << "ende" << std::endl;
 }
