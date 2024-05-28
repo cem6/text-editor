@@ -6,5 +6,5 @@ worsen the situation. It will certainly subject human being to greater indigniti
 it will probably lead to greater social disruption and psychological suffering, and it may lead to increased physical suffering
 even in “advanced” countries.
 
-zoom + linenumbers
-no cursor
+NOCURSOR
+everything is hardcoded
