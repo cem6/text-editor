@@ -2,6 +2,7 @@
 #define WINDOW_H
 
 #include "settings.h"
+#include "cursor.h"
 
 // maybe keyboard should have its own class
 
@@ -11,6 +12,8 @@ private:
     sf::Font font;
     sf::Text text;
     std::vector<std::string> &textVec; // i dont think this is a good idea
+    Cursor cursor;
+    sf::RectangleShape cursorShape;
 
 public:
     sf::RenderWindow self;
@@ -31,6 +34,12 @@ public:
         text.setFillColor(sf::Color::White);
         updateText(textVec);
         // text.setPosition(0, 0);
+        text.setLineSpacing(1);
+
+        // textsize 18: width 12, height 20
+        cursorShape.setSize(sf::Vector2f(2, TEXTSIZE));
+        cursorShape.setFillColor(sf::Color::Blue);
+        cursorShape.setOrigin(sf::Vector2f(-10, -2));
     }
 
     void handleEvents() {
@@ -47,6 +56,18 @@ public:
 
             if (e.type == sf::Event::TextEntered)
                 input(e.text.unicode);
+            
+            // cursor movement
+            if (e.key.code == sf::Keyboard::Right && cursor.x < textVec[cursor.y].size())
+                cursor.x++;
+            if (e.key.code == sf::Keyboard::Left && cursor.x > 0)
+                cursor.x--;
+            if (e.key.code == sf::Keyboard::Down && cursor.y < textVec.size())
+                cursor.y++;
+            if (e.key.code == sf::Keyboard::Up && cursor.y > 0)
+                cursor.y--;
+
+            std::cout << cursor.x << " " << cursor.y << std::endl;
         }
     }
     
@@ -61,6 +82,7 @@ public:
     void render() {
         self.clear(sf::Color::Black);
         self.setView(view);  // should propably be done in resize function
+        self.draw(cursorShape);
         self.draw(text);
         self.display();
     }
@@ -103,15 +125,37 @@ private:
             return; // dont want to write c that was pressed wit mod key
         }
 
-        // write input, CURSOR IS NOT YET IMPLEMENTED
-        if (c == '\b') {
-            textVec.back().pop_back();
+        // write input, CURSOR IS NOT YET VISIBLE
+        if (c == '\b') { // backspace
+            // bug: sometimes the whole line is deleted, i dont know why because i cant see the cursor and thinking is hard
+            // delete only char at cursor.x
+            if (!textVec[cursor.y].empty()) textVec[cursor.y].erase(cursor.x); // bug (vielleicht)
+            // line is empty, delete empty line and go to line before
+            else if (cursor.y != 0) textVec.erase(textVec.begin() + cursor.y--);
         }
-        else if (c == '\n' || c == '\r') {
-            textVec.back().push_back('\n');
+        else if (c == '\n' || c == '\r') { // newline
+            // cursor is at end of line, insert new line after this line
+            if (cursor.x == textVec[cursor.y].size()) {
+                std::cout << cursor.x << " " << textVec[cursor.y].size() << std::endl; 
+                textVec.insert(textVec.begin() + cursor.y + 1, "");
+                cursor.y++;
+            }
+            // cursor is in middle of line, insert everything right of cursor to new line after this line
+            else {
+                // new line
+                textVec.insert(textVec.begin() + cursor.y + 1, textVec[cursor.y].substr(cursor.x));
+                // this line
+                textVec[cursor.y] = textVec[cursor.y].substr(0, cursor.x);
+                // move cursor begin of new line
+                cursor.y++;
+                cursor.x = 0;
+            }
         }
-        else textVec.back() += static_cast<char>(c);
-
+        else { // char
+            // insert works for both, middle and back of string
+            textVec[cursor.y] = textVec[cursor.y].insert(cursor.x++, 1, static_cast<char>(c));
+            
+        }
         updateText(textVec);
     }
 };

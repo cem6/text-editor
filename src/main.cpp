@@ -12,6 +12,6 @@ int main() {
         window.render();
     }
 
-    file.updateFile();
+    // file.updateFile();
     return 0;
 }
