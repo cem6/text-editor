@@ -5,6 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(editor
         src/main.cpp
+        src/settings.h
+        src/window.h
+        src/filehandling.h
 )
 
 target_link_libraries(editor
