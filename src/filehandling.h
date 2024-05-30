@@ -29,6 +29,9 @@ public:
             textVec.push_back(line);
         }
         instream.close();
+
+        // segfault when opening empty file
+        if (textVec.empty()) textVec.push_back("");
     }
 
     void updateFile() {
