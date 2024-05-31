@@ -4,7 +4,7 @@
 #include "settings.h"
 #include "cursor.h"
 
-// TODO: del, ctrl + arrow, mousepointer (set cursor, select), ui
+// TODO: mousepointer (set cursor, select), ui
 // maybe keyboard and cursor should have their own class
 
 class Window {
@@ -102,15 +102,28 @@ private:
             if (delta == -1) text.move(0, -20);
             if (delta == 1 && text.getPosition().y < 0) text.move(0, 20);
         }
+        updateCursorShape(); // doesnt work correctly
     }
 
     // for everything that is not Event::TextEntered
     void handleKeypressed(const sf::Event &e) {
+        // cursor movement with arrow keys
         if (e.key.code == sf::Keyboard::Right || e.key.code == sf::Keyboard::Left ||
             e.key.code == sf::Keyboard::Down || e.key.code == sf::Keyboard::Up) {
             cursorMovement(e);
         }
-        // TODO: add del
+        // del
+        else if (e.key.code == sf::Keyboard::Delete) {
+            // delete char at cursor.x + 1 (right of cursor)
+            if (cursor.x < textVec[cursor.y].size()) {
+                textVec[cursor.y].erase(cursor.x, 1);
+            }
+            // if cursor it at end of line, move next line to end of this line (if next line exists)
+            else if (cursor.y + 1 < textVec.size()) {
+                textVec[cursor.y] += textVec[cursor.y + 1];
+                textVec.erase(textVec.begin() + cursor.y + 1);
+            }
+        }
     }
 
     // for everything that is Event::TextEntered
@@ -127,6 +140,7 @@ private:
                 TEXTSIZE--;
                 text.setCharacterSize(TEXTSIZE);
             }
+            updateCursorShape();
             return; // dont want to write c that was pressed with mod key
         }
 
@@ -137,13 +151,13 @@ private:
                 textVec[cursor.y].erase(cursor.x - 1, 1);
                 cursor.x--;
             }
-            // cursor it at first x of line, delete this line, append this lines text to line before
+            // cursor it at begin of line, delete this line, append this lines text to line before
             else if (cursor.y != 0) {
                 cursor.x = textVec[cursor.y - 1].size();
                 textVec[cursor.y - 1] += textVec[cursor.y];
                 textVec.erase(textVec.begin() + cursor.y--);
             }
-            updateCursorShape();
+            // updateCursorShape(); // not neccessary, vielleicht
         }
         // newline
         else if (c == '\n' || c == '\r') { 
@@ -162,8 +176,13 @@ private:
             cursor.y++;
             cursor.x = 0;
         }
+        // tab
+        else if (c == '\t') {
+            textVec[cursor.y].insert(cursor.x, "    ");
+            cursor.x += 4;
+        }
         // char
-        else { 
+        else if (isprint(static_cast<unsigned char>(c))) { 
             // insert works for both, middle and back of string
             textVec[cursor.y] = textVec[cursor.y].insert(cursor.x++, 1, static_cast<char>(c));
         }
@@ -174,26 +193,48 @@ private:
     void cursorMovement(const sf::Event &e) {
         if (clock.getElapsedTime() < cursorMoveDelay) return;
 
-        switch (e.key.code) {
-            case sf::Keyboard::Right:
-                if (cursor.x < textVec[cursor.y].size()) cursor.x++;
-                break;
-            case sf::Keyboard::Left:
-                if (cursor.x > 0) cursor.x--;
-                break;
-            case sf::Keyboard::Down:
-                if (cursor.y < textVec.size() - 1) {
-                    cursor.y++;
-                    cursor.x = std::min(cursor.x, (int) textVec[cursor.y].size());
-                }
-                break;
-            case sf::Keyboard::Up:
-                if (cursor.y > 0) {
-                    cursor.y--;
-                    cursor.x = std::min(cursor.x, (int) textVec[cursor.y].size());
-                }
-                break;
+        // skip to next non alnum or begin/end of line
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
+            switch (e.key.code) {
+                case sf::Keyboard::Right:
+                    if (cursor.x < textVec[cursor.y].size()) {
+                        do { cursor.x++; } while (cursor.x < textVec[cursor.y].size() && std::isalnum(textVec[cursor.y][cursor.x]));
+                    }
+                    break;
+
+                case sf::Keyboard::Left:
+                    if (cursor.x > 0) {
+                        cursor.x--;
+                        do { cursor.x--; } while (cursor.x >= 0 && std::isalnum(textVec[cursor.y][cursor.x]));
+                        cursor.x++; 
+                    }
+                    break;
+            }
         }
+        // move cursor by 1
+        else {
+            switch (e.key.code) {
+                case sf::Keyboard::Right:
+                    if (cursor.x < textVec[cursor.y].size()) cursor.x++;
+                    break;
+                case sf::Keyboard::Left:
+                    if (cursor.x > 0) cursor.x--;
+                    break;
+                case sf::Keyboard::Down:
+                    if (cursor.y < textVec.size() - 1) {
+                        cursor.y++;
+                        cursor.x = std::min(cursor.x, (int) textVec[cursor.y].size());
+                    }
+                    break;
+                case sf::Keyboard::Up:
+                    if (cursor.y > 0) {
+                        cursor.y--;
+                        cursor.x = std::min(cursor.x, (int) textVec[cursor.y].size());
+                    }
+                    break;
+            }
+        }
+            
         std::cout << cursor.x << " " << cursor.y << std::endl;
         clock.restart();
         updateCursorShape();
