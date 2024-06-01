@@ -1,10 +1,12 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+#include <limits>
 #include "settings.h"
 #include "cursor.h"
+#include "mouse.h"
 
-// TODO: mousepointer (set cursor, select), ui
+// TODO: mousepointer (select), ui
 // maybe keyboard and cursor should have their own class
 
 class Window {
@@ -18,6 +20,7 @@ private:
     sf::RectangleShape cursorShape;
     sf::Clock clock;
     sf::Time cursorMoveDelay = sf::milliseconds(10);
+    Mouse mouse;
 
 public:
     sf::RenderWindow self;
@@ -63,6 +66,13 @@ public:
             
             if (e.type == sf::Event::KeyPressed)
                 handleKeypressed(e);
+
+            // leftclick
+            if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left) {
+                mouseCursor();
+            }
+                
+            
         }
     }
     
@@ -235,14 +245,45 @@ private:
             }
         }
             
-        std::cout << cursor.x << " " << cursor.y << std::endl;
         clock.restart();
         updateCursorShape();
+        std::cout << "cursor: line: " << cursor.y << ", char: " << cursor.x << std::endl;
     }
 
-/* -------------------- chatgpt code alert -------------------- */
+    // move cursor on leftclick
+    void mouseCursor() {
+        auto [x, y] = sf::Mouse::getPosition(self);
+        auto [line, character] = getCursorFromMousePos(x, y);
+        cursor.y = line;
+        cursor.x = character;
+
+        updateCursorShape();
+        std::cout << "mouse: " << x << " " << y << std::endl;
+
+    }
+    std::pair<int, int> getCursorFromMousePos(int x, int y) {
+        // convert mouse y to line number
+        int line = y / (TEXTSIZE + TEXTSIZE / 3);
+        line = std::min(std::max(line, 0), (int) textVec.size() - 1); // line can only be where thext is
+
+        // convert mouse x to character pos in line
+        int character = 0;
+        float minDistance = std::numeric_limits<float>::max();
+        for (int i = 0; i <= textVec[line].size(); i++) {
+            float charX = text.findCharacterPos(i + getTextOffset()).x; // sfml OP
+            float distance = std::abs(charX - x);
+            if (distance < minDistance) {
+                minDistance = distance;
+                character = i;
+            }
+        }
+
+        return {line, character};
+    }
+
+    // update cursorShape pos based on cursor.x and cursor.y in text
     void updateCursorShape() {
-        float x = text.getPosition().x + text.findCharacterPos(cursor.x + getTextOffset()).x;
+        float x = text.getPosition().x + text.findCharacterPos(cursor.x + getTextOffset()).x; // sfml OP
         float y = text.getPosition().y + cursor.y * (TEXTSIZE + TEXTSIZE / 3);
         cursorShape.setPosition(x, y);
         cursorShape.setSize(sf::Vector2f(2, TEXTSIZE));
@@ -254,7 +295,6 @@ private:
         }
         return offset;
     }
-/* -------------------- chatgpt code alert -------------------- */
 
 };
 

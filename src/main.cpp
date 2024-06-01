@@ -1,5 +1,4 @@
 #include "settings.h"
-
 #include "window.h"
 #include "filehandling.h"
 
