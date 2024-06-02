@@ -3,14 +3,13 @@
 
 #include "settings.h"
 #include <fstream>
+#include <iostream>
 
 class Filehandling {
 private:
     std::string path;
 
 public:
-    std::vector<std::string> textVec;
-
     Filehandling(std::string s) : path{s} {
         getFile();
     }
@@ -31,7 +30,7 @@ public:
         // segfault when opening empty file
         if (textVec.empty()) textVec.push_back("");
 
-        std::cout << "file at " << path << " opened" << std::endl;
+        std::cout << "file read from " << path << std::endl;
     }
 
     void updateFile() {

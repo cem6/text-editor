@@ -1,23 +1,17 @@
-lsdfllsdakfjlskadjfcdies ist ein sehr schoener text-editor.
-er hat einige funktionen wie 
-dsf
-sdf
-dsf
-sdsdaf
-sda
-f
-sd
-sda
-sdf
+sadfas
+fasd
+
+sdfasdflkasjdf
+asdf
+asdfas
 df
-fds
-
-sdfa
-sdfa
-sd
-
-safd
-sa
-sd
-
+asd
+f
+sadfsadsda
+sadfsda
+sadf 
+asdsd fs daasdf;kl
+asaasd 
+as dasd 
+a dsas d
 
