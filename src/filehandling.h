@@ -12,8 +12,6 @@ public:
     std::vector<std::string> textVec;
 
     Filehandling(std::string s) : path{s} {
-        std::cout << "filehandling constructor" << std::endl;
-
         getFile();
     }
 
@@ -32,6 +30,8 @@ public:
 
         // segfault when opening empty file
         if (textVec.empty()) textVec.push_back("");
+
+        std::cout << "file at " << path << " opened" << std::endl;
     }
 
     void updateFile() {
@@ -43,6 +43,8 @@ public:
         for (const std::string &line : textVec)
             outstream << line << '\n';
         outstream.close();
+
+        std::cout << "file saved to " << path << std::endl;
     }
 
 };
