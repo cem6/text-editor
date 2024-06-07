@@ -10,7 +10,8 @@ extern int SCREEN_WIDTH;
 extern int SCREEN_HEIGHT;
 extern int TEXTSIZE;
 
+// ????????????? this is very bad
 extern std::vector<std::string> textVec;
 extern sf::Text text;
 
-#endif // SETTINGS_H
+#endif

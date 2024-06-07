@@ -2,24 +2,29 @@
 #define WINDOW_H
 
 #include "settings.h"
+#include <SFML/System/Vector2.hpp>
 #include <iostream>
 #include "cursor.h"
 
 // leftclick doesnt work after horizontal scroll
+// zooming scrolls ?
 //
-// TODO: mousepointer (select), copy / paste, scrollbars
+// selectionShape doesnt end on line end
+// 
+// TODO: arrow select, copy / paste, scrollbars
 
 class Window {
 private:
     sf::View view;
     sf::Font font;
-    // std::vector<std::string> &textVec; // i dont think this is a good idea
 
     sf::Text lineNumbers;
     sf::RectangleShape lineNumberBar;
+    std::string lineNumberStr = "";
 
     Cursor cursor;
     sf::RectangleShape cursorShape; // everything that is rendered can be done in window class
+    std::vector<sf::RectangleShape> selectionShapes;
 
 public:
     sf::RenderWindow self;
@@ -41,12 +46,22 @@ public:
         lineNumbers.setOrigin(-TEXTSIZE, 0);
         lineNumberBar.setSize(sf::Vector2f(TEXTSIZE * 3.8, SCREEN_HEIGHT));
         lineNumberBar.setFillColor(sf::Color::Black); // 20, 10, 30
+        for (int i = 1; i <= 999; i++) {
+            std::string s = std::to_string(i);
+            switch(s.size()) {
+                case 1: s = "  " + s; break;
+                case 2: s = " " + s; break;
+                default: break;
+            }
+            lineNumberStr += s + '\n';
+        }
 
         updateText();
 
         cursorShape.setSize(sf::Vector2f(2, TEXTSIZE));
         cursorShape.setFillColor(sf::Color(0, 200, 0));
         cursorShape.setOrigin(sf::Vector2f(0, -2));
+        selectionShapes.push_back(sf::RectangleShape());
     }
 
     void handleEvents() {
@@ -58,20 +73,38 @@ public:
             // keyboard
             if (e.type == sf::Event::TextEntered) handleTextEntered(e.text.unicode);
             if (e.type == sf::Event::KeyPressed) handleKeypressed(e);
-            // scroll
+            // mousewheel
             if (e.type == sf::Event::MouseWheelScrolled && e.mouseWheelScroll.wheel == sf::Mouse::VerticalWheel)
-                scroll(e.mouseWheelScroll.delta);
-            // leftclick
+                handleMousewheel(e.mouseWheelScroll.delta);
+            
+
+            // leftclick press
             if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left) {
-                cursor.setPosToMouse(self, text.getPosition());
-                updateCursorRender();
+                cursor.leftclickPressed(self, text.getPosition());
+                updateCursorShape();
+                // updateSelectionShape();
             }
+            // leftclick release
+            if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Left) {
+                cursor.leftclickReleased(self, text.getPosition());
+                updateCursorShape();
+                // updateSelectionShape();
+            }
+            // executes while leftclick is pressed and not released
+            if (cursor.leftclick) {
+                // cursor.selectionEnd = sf::Mouse::getPosition(self);
+                cursor.selectionEndMouse = sf::Mouse::getPosition(self);
+                updateSelectionShape();
+                std::cout << "pressed\n";
+            }
+            
         }
     }
     void render() {
         self.clear(sf::Color::Black); // 30, 20, 40
-        self.draw(cursorShape);
         self.draw(text);
+        self.draw(cursorShape);
+        for (const auto &sh : selectionShapes) self.draw(sh);
         self.draw(lineNumberBar);
         self.draw(lineNumbers);
         self.display();
@@ -81,7 +114,6 @@ private:
     // .setString() cant be used with vector
     void updateText() {
         // there should always be an extra empty line after the last line
-        // updateDisplayText() propably isnt the right place for this
         if (textVec.back() != "")
             textVec.push_back("");
         
@@ -91,26 +123,55 @@ private:
             s += '\n' + textVec[i];
         text.setString(s);
 
-        // VERY NICE AND GREAT im sure theres no better way
-        std::string lineNumberStr = "";
-        size_t maxLines = std::min(textVec.size(), size_t(999)); // limit to 999 lines
-        for (size_t i = 1; i <= maxLines; i++) {
-            std::string s = std::to_string(i);
-            while (s.size() < 3) s = ' ' + s;
-            lineNumberStr += s + '\n';
+        // textVec.size() == how much of lineNumberStr is rendered
+        int maxLines = std::min(textVec.size(), size_t(999)); // limit to 999 lines
+        int i = 0, lines = 0;
+        while (lines < maxLines && i < lineNumberStr.size()) {
+            if (lineNumberStr[i] == '\n') lines++;
+            i++;
         }
-        lineNumbers.setString(lineNumberStr); // ????
+        lineNumbers.setString(lineNumberStr.substr(0, i)); // ????
     }
 
-    // update cursorShape pos based on cursor.x and cursor.y in text
-    void updateCursorRender() {
+    // update cursorShape pos and size
+    void updateCursorShape() {
         float x = text.getPosition().x + text.findCharacterPos(cursor.x + cursor.getTextOffset()).x; // sfml OP
         float y = text.getPosition().y + cursor.y * (TEXTSIZE + TEXTSIZE / 3);
         cursorShape.setPosition(x, y);
         cursorShape.setSize(sf::Vector2f(2, TEXTSIZE));
     }
 
+    // update selectionShape pos and size, doesnt interact with text
+    void updateSelectionShape() {
+        selectionShapes.clear();
 
+        // get window coords from selectionStart, selectionEnd (mouse coords) for rendering
+        sf::Vector2f startPos = self.mapPixelToCoords(cursor.selectionStartMouse);
+        sf::Vector2f endPos = self.mapPixelToCoords(cursor.selectionEndMouse);
+
+        // ensure start is top left and end is bottom right
+        if (startPos.y > endPos.y || (startPos.y == endPos.y && startPos.x > endPos.x))
+            std::swap(startPos, endPos);
+
+        // rectangleShape for every line
+        int lineHeight = TEXTSIZE + TEXTSIZE / 3;
+        int startLine = startPos.y / lineHeight;
+        int endLine = endPos.y / lineHeight;
+        for (int line = startLine; line <= endLine; line++) {
+            sf::RectangleShape selectionShape;
+
+            float y = line * lineHeight;
+            float xStart = (line == startLine ? startPos.x : text.getPosition().x);
+            // doesnt end on lines end but on same x for every line, ??? use findCharacterPos() oder so
+            float xEnd = (line == endLine ? endPos.x : text.getPosition().x + text.getGlobalBounds().width);
+
+            selectionShape.setPosition(xStart, y);
+            selectionShape.setSize(sf::Vector2f(xEnd - xStart, lineHeight));
+            selectionShape.setFillColor(sf::Color(100, 100, 255, 100));
+
+            selectionShapes.push_back(selectionShape);
+        }
+    }
 
     // for everything that is not Event::TextEntered
     void handleKeypressed(const sf::Event &e) {
@@ -118,12 +179,17 @@ private:
         if (e.key.code == sf::Keyboard::Right || e.key.code == sf::Keyboard::Left ||
             e.key.code == sf::Keyboard::Down || e.key.code == sf::Keyboard::Up) {
             cursor.handleMovement(e);
-            updateCursorRender();
+            if (cursor.selectionActive) cursor.resetSelection(selectionShapes);
+            updateCursorShape();
         }
         // del
         else if (e.key.code == sf::Keyboard::Delete) {
+            // delete selection
+            if (cursor.selectionActive) {
+                cursor.deleteSelection(selectionShapes);
+            }
             // delete char at cursor.x + 1 (right of cursor)
-            if (cursor.x < textVec[cursor.y].size()) {
+            else if (cursor.x < textVec[cursor.y].size()) {
                 textVec[cursor.y].erase(cursor.x, 1);
             }
             // if cursor is at end of line, move next line to end of this line (if next line exists)
@@ -141,10 +207,13 @@ private:
             switch (c) {
                 case '=': zoom(+1); break;
                 case '-': zoom(-1); break;
-
                 default: break;
             }
             return; // dont want to write c that was pressed with mod key
+        }
+
+        if (cursor.selectionActive) {
+            cursor.deleteSelection(selectionShapes);
         }
 
         // backspace
@@ -185,7 +254,7 @@ private:
             textVec[cursor.y] = textVec[cursor.y].insert(cursor.x++, 1, static_cast<char>(c)); // insert works fine
         }
         updateText();
-        updateCursorRender();
+        updateCursorShape();
     }
 
 
@@ -199,7 +268,7 @@ private:
         self.setView(view);
         // resize lineNumberBar and cursor
         lineNumberBar.setSize(sf::Vector2f(TEXTSIZE * 3.8, height));
-        updateCursorRender();
+        updateCursorShape();
     }
 
     void zoom(int mode) {
@@ -213,32 +282,48 @@ private:
         lineNumbers.setOrigin(-TEXTSIZE, 0);
         lineNumberBar.setSize(sf::Vector2f(TEXTSIZE * 3.8, SCREEN_HEIGHT));
 
-        updateCursorRender();
+        updateText(); // ?
+        updateCursorShape();
+        if (cursor.selectionActive) cursor.resetSelection(selectionShapes); // ?
     }
 
-    void scroll(int delta) {
+    void handleMousewheel(int delta) {
+        // zoom
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
+            if (delta == -1) {
+                zoom(-1);
+            }
+            if (delta == 1) {
+                zoom(+1);
+            } 
+        }
         // horizontal scroll
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) {
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) {
             if (delta == -1) {
                 text.move(-20, 0);
+                for (auto &sh : selectionShapes) sh.move(-20, 0);
             }
             if (delta == 1 && text.getPosition().x < 0) {
                 text.move(20, 0);
+                for (auto &sh : selectionShapes) sh.move(20, 0);
             } 
         }
         // vertical scroll
         else {
-            int v = 3 * (TEXTSIZE + TEXTSIZE / 3); // size of 3 * 1line with cur textsize
-            if (delta == -1) {
-                text.move(0, -v);
-                lineNumbers.move(0, -v);
+            int lineHeight = TEXTSIZE + TEXTSIZE / 3;
+            int scrollHeight = 3 * lineHeight; // size of 3 lines with cur textsize
+            if (delta == -1 && (text.getPosition().y - scrollHeight) * -1 < textVec.size() * lineHeight) {
+                text.move(0, -scrollHeight);
+                lineNumbers.move(0, -scrollHeight);
+                for (auto &sh : selectionShapes) sh.move(0, -scrollHeight);
             }
             if (delta == 1 && text.getPosition().y < 0) {
-                text.move(0, v);
-                lineNumbers.move(0, v);
+                text.move(0, scrollHeight);
+                lineNumbers.move(0, scrollHeight);
+                for (auto &sh : selectionShapes) sh.move(0, scrollHeight);
             }
         }
-        updateCursorRender();
+        updateCursorShape();
     }
 
 };
