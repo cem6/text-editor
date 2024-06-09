@@ -2,16 +2,8 @@
 #define WINDOW_H
 
 #include "settings.h"
-#include <SFML/System/Vector2.hpp>
 #include <iostream>
 #include "cursor.h"
-
-// leftclick doesnt work after horizontal scroll
-// zooming scrolls ?
-//
-// selectionShape doesnt end on line end
-// 
-// TODO: arrow select, copy / paste, scrollbars
 
 class Window {
 private:
@@ -92,10 +84,24 @@ public:
             }
             // executes while leftclick is pressed and not released
             if (cursor.leftclick) {
-                // cursor.selectionEnd = sf::Mouse::getPosition(self);
                 cursor.selectionEndMouse = sf::Mouse::getPosition(self);
-                updateSelectionShape();
-                std::cout << "pressed\n";
+                updateMouseSelectionShape();
+                std::cout << "leftclick pressed\n";
+            }
+
+            // shift press
+            if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::LShift) {
+                cursor.shiftPressed();
+            }
+            // shift release
+            if (e.type == sf::Event::KeyReleased && e.key.code == sf::Keyboard::LShift) {
+                cursor.shiftReleased();
+            }
+            // executes while shift is pressed and not released
+            if (cursor.shift) {
+                cursor.selectionEnd = {cursor.y, cursor.x};
+                updateKeyboardSelectionShape();
+                std::cout << "shift pressed\n";
             }
             
         }
@@ -141,8 +147,11 @@ private:
         cursorShape.setSize(sf::Vector2f(2, TEXTSIZE));
     }
 
+
+    // !!!!!!!!!!!! UPDATEMOUSESELECTIONSHAPE AND UPDATEKEYBOARDSELECTIONSHAPE CAN BE A SINGLE UPDATESELECTIONSHAPE FUNCTION !!!!!!!!!!!!
+
     // update selectionShape pos and size, doesnt interact with text
-    void updateSelectionShape() {
+    void updateMouseSelectionShape() {
         selectionShapes.clear();
 
         // get window coords from selectionStart, selectionEnd (mouse coords) for rendering
@@ -173,6 +182,42 @@ private:
         }
     }
 
+    void updateKeyboardSelectionShape() {
+        selectionShapes.clear();
+
+        sf::Vector2f startPos;
+        sf::Vector2f endPos;
+
+        startPos.x = text.getPosition().x + text.findCharacterPos(cursor.selectionStart.second + cursor.getTextOffset()).x;
+        startPos.y = text.getPosition().y + cursor.selectionStart.first * (TEXTSIZE + TEXTSIZE / 3);
+        endPos.x = text.getPosition().x + text.findCharacterPos(cursor.selectionEnd.second + cursor.getTextOffset()).x;
+        endPos.y = text.getPosition().y + cursor.selectionEnd.first * (TEXTSIZE + TEXTSIZE / 3);
+        
+        // ensure start is top left and end is bottom right
+        if (startPos.y > endPos.y || (startPos.y == endPos.y && startPos.x > endPos.x))
+            std::swap(startPos, endPos);
+
+        // rectangleShape for every line
+        int lineHeight = TEXTSIZE + TEXTSIZE / 3;
+        int startLine = startPos.y / lineHeight;
+        int endLine = endPos.y / lineHeight;
+        for (int line = startLine; line <= endLine; line++) {
+            sf::RectangleShape selectionShape;
+
+            float y = line * lineHeight;
+            float xStart = (line == startLine ? startPos.x : text.getPosition().x);
+            // doesnt end on lines end but on same x for every line, ??? use findCharacterPos() oder so
+            float xEnd = (line == endLine ? endPos.x : text.getPosition().x + text.getGlobalBounds().width);
+
+            selectionShape.setPosition(xStart, y);
+            selectionShape.setSize(sf::Vector2f(xEnd - xStart, lineHeight));
+            selectionShape.setFillColor(sf::Color(100, 100, 255, 100));
+
+            selectionShapes.push_back(selectionShape);
+        }
+    }
+
+
     // for everything that is not Event::TextEntered
     void handleKeypressed(const sf::Event &e) {
         // cursor movement with arrow keys
@@ -202,6 +247,9 @@ private:
 
     // for everything that is Event::TextEntered
     void handleTextEntered(char c) {
+        // fix weird shift behavior, maybe 
+        if (cursor.shift) cursor.shiftReleased(); // ?????????????????????
+
         // input with mod keys (can best be handled in here bc = and - are are Event::TextEntered)
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
             switch (c) {
@@ -212,12 +260,15 @@ private:
             return; // dont want to write c that was pressed with mod key
         }
 
+        // check if theres a selection that needs to be deleted before modifying text
+        bool deletedSelection = false;
         if (cursor.selectionActive) {
             cursor.deleteSelection(selectionShapes);
+            deletedSelection = true;
         }
 
-        // backspace
-        if (c == '\b') {
+        // backspace, (dont want extra backspace after deleting selection (this i propably not a good way to do this))
+        if (c == '\b' && !deletedSelection) {
             // cursor somewhere in line except begin
             if (!textVec[cursor.y].empty() && cursor.x > 0)  {
                 textVec[cursor.y].erase(cursor.x - 1, 1); // delete char left of cursor
@@ -256,8 +307,6 @@ private:
         updateText();
         updateCursorShape();
     }
-
-
 
     void resizeWindow(int width, int height) {
         SCREEN_WIDTH = width;
