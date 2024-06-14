@@ -68,11 +68,11 @@ public:
         std::cout << "\nleftclick pressed\n";
     }
     void leftclickReleased(const sf::Window &win, const sf::Vector2f &scrollOffset) {
-        leftclick = false;
         // set cursorPos
         setPos(getMousePos(win, scrollOffset, selectionEndMouse));
         // do selection
         mouseSelect(win, scrollOffset);
+        leftclick = false;     
         std::cout << "leftclick released" << std::endl;
     }
 
@@ -96,9 +96,6 @@ public:
         // skip to next non alnum or begin/end of line
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
             bool select = sf::Keyboard::isKeyPressed(sf::Keyboard::LShift);
-
-            // if select:
-            // get cursor start and cursor end and select range
 
             switch (e.key.code) {
                 case sf::Keyboard::Right:
@@ -159,8 +156,6 @@ private:
     }
 
 
-    // !!!!!!!!!!!! MOUSESELECT AND KEYBOARDSELECT CAN BE A SINGLE SELECT FUNCTION !!!!!!!!!!!!
-
     // converts selections mouse positions (start, end) to {line, char} and gets the selected text from textVec
     void mouseSelect(const sf::Window &win, const sf::Vector2f &scrollOffset) {
         // no need to execute all this when nothing was selected
@@ -180,23 +175,7 @@ private:
             std::swap(selectionStart, selectionEnd);
         }
 
-        auto [startLine, startChar] = selectionStart;
-        auto [endLine, endChar] = selectionEnd;
-
-        /* print selected text */
-        std::cout << "---\nstart: " << startLine + 1 << " " << startChar << "\n";
-        std::cout << "end: " << endLine + 1 << " " << endChar << "\n";
-        if (startLine == endLine) {
-            std::cout << textVec[startLine].substr(startChar, endChar - startChar) << "\n";
-        }
-        else {
-            for (int line = startLine; line <= endLine; line ++) {
-                if (line == startLine) std::cout << textVec[startLine].substr(startChar) << '\n';
-                else if (line == endLine && startLine != endLine) std::cout << textVec[endLine].substr(0, endChar) << "\n---" << std::endl;
-                else std::cout << textVec[line] << "\n";
-            }
-        }
-        /* print selected text */
+        printSelection(selectionStart, selectionEnd);
     }
 
     // converts cursor starting position and cursor ending position (keyboard movement) to selection
@@ -214,10 +193,13 @@ private:
             std::swap(selectionStart, selectionEnd);
         }
 
-        auto [startLine, startChar] = selectionStart;
-        auto [endLine, endChar] = selectionEnd;
+        printSelection(selectionStart, selectionEnd);
+    }
+    
+    void printSelection(const std::pair<int, int> &start, const std::pair<int, int> &end) {
+        auto [startLine, startChar] = start;
+        auto [endLine, endChar] = end;
 
-        /* print selected text */
         std::cout << "---\nstart: " << startLine + 1 << " " << startChar << "\n";
         std::cout << "end: " << endLine + 1 << " " << endChar << "\n";
         if (startLine == endLine) {
@@ -230,9 +212,7 @@ private:
                 else std::cout << textVec[line] << "\n";
             }
         }
-        /* print selected text */
     }
-    
 
 
     // get current mouse pos in {line, char} form

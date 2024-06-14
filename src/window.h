@@ -41,8 +41,8 @@ public:
         for (int i = 1; i <= 999; i++) {
             std::string s = std::to_string(i);
             switch(s.size()) {
-                case 1: s = "  " + s; break;
                 case 2: s = " " + s; break;
+                case 1: s = "  " + s; break;
                 default: break;
             }
             lineNumberStr += s + '\n';
@@ -72,6 +72,7 @@ public:
 
             // leftclick press
             if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left) {
+                cursor.resetSelection(selectionShapes); // fixes stickSelectionShapes() bug
                 cursor.leftclickPressed(self, text.getPosition());
                 updateCursorShape();
                 // updateSelectionShape();
@@ -81,11 +82,13 @@ public:
                 cursor.leftclickReleased(self, text.getPosition());
                 updateCursorShape();
                 // updateSelectionShape();
+                stickSelectionShapes();
+
             }
             // executes while leftclick is pressed and not released
             if (cursor.leftclick) {
                 cursor.selectionEndMouse = sf::Mouse::getPosition(self);
-                updateMouseSelectionShape();
+                updateSelectionShapes();
                 std::cout << "leftclick pressed\n";
             }
 
@@ -100,7 +103,7 @@ public:
             // executes while shift is pressed and not released
             if (cursor.shift) {
                 cursor.selectionEnd = {cursor.y, cursor.x};
-                updateKeyboardSelectionShape();
+                updateSelectionShapes();
                 std::cout << "shift pressed\n";
             }
             
@@ -147,52 +150,23 @@ private:
         cursorShape.setSize(sf::Vector2f(2, TEXTSIZE));
     }
 
-
-    // !!!!!!!!!!!! UPDATEMOUSESELECTIONSHAPE AND UPDATEKEYBOARDSELECTIONSHAPE CAN BE A SINGLE UPDATESELECTIONSHAPE FUNCTION !!!!!!!!!!!!
-
-    // update selectionShape pos and size, doesnt interact with text
-    void updateMouseSelectionShape() {
-        selectionShapes.clear();
-
-        // get window coords from selectionStart, selectionEnd (mouse coords) for rendering
-        sf::Vector2f startPos = self.mapPixelToCoords(cursor.selectionStartMouse);
-        sf::Vector2f endPos = self.mapPixelToCoords(cursor.selectionEndMouse);
-
-        // ensure start is top left and end is bottom right
-        if (startPos.y > endPos.y || (startPos.y == endPos.y && startPos.x > endPos.x))
-            std::swap(startPos, endPos);
-
-        // rectangleShape for every line
-        int lineHeight = TEXTSIZE + TEXTSIZE / 3;
-        int startLine = startPos.y / lineHeight;
-        int endLine = endPos.y / lineHeight;
-        for (int line = startLine; line <= endLine; line++) {
-            sf::RectangleShape selectionShape;
-
-            float y = line * lineHeight;
-            float xStart = (line == startLine ? startPos.x : text.getPosition().x);
-            // doesnt end on lines end but on same x for every line, ??? use findCharacterPos() oder so
-            float xEnd = (line == endLine ? endPos.x : text.getPosition().x + text.getGlobalBounds().width);
-
-            selectionShape.setPosition(xStart, y);
-            selectionShape.setSize(sf::Vector2f(xEnd - xStart, lineHeight));
-            selectionShape.setFillColor(sf::Color(100, 100, 255, 100));
-
-            selectionShapes.push_back(selectionShape);
-        }
-    }
-
-    void updateKeyboardSelectionShape() {
+    void updateSelectionShapes() {
         selectionShapes.clear();
 
         sf::Vector2f startPos;
         sf::Vector2f endPos;
 
-        startPos.x = text.getPosition().x + text.findCharacterPos(cursor.selectionStart.second + cursor.getTextOffset()).x;
-        startPos.y = text.getPosition().y + cursor.selectionStart.first * (TEXTSIZE + TEXTSIZE / 3);
-        endPos.x = text.getPosition().x + text.findCharacterPos(cursor.selectionEnd.second + cursor.getTextOffset()).x;
-        endPos.y = text.getPosition().y + cursor.selectionEnd.first * (TEXTSIZE + TEXTSIZE / 3);
-        
+        if (cursor.leftclick) {
+            startPos = self.mapPixelToCoords(cursor.selectionStartMouse);
+            endPos = self.mapPixelToCoords(cursor.selectionEndMouse);
+        }
+        else if (cursor.shift) {
+            startPos.x = text.getPosition().x + text.findCharacterPos(cursor.selectionStart.second + cursor.getTextOffset()).x;
+            startPos.y = text.getPosition().y + cursor.selectionStart.first * (TEXTSIZE + TEXTSIZE / 3);
+            endPos.x = text.getPosition().x + text.findCharacterPos(cursor.selectionEnd.second + cursor.getTextOffset()).x;
+            endPos.y = text.getPosition().y + cursor.selectionEnd.first * (TEXTSIZE + TEXTSIZE / 3);
+        }
+
         // ensure start is top left and end is bottom right
         if (startPos.y > endPos.y || (startPos.y == endPos.y && startPos.x > endPos.x))
             std::swap(startPos, endPos);
@@ -216,7 +190,34 @@ private:
             selectionShapes.push_back(selectionShape);
         }
     }
+    // TEMP! for doing one updateSelectionShapes() with cursor positions after mouseSelect() to get "stick" to chars effect
+    void stickSelectionShapes() {
+        selectionShapes.clear();
 
+        sf::Vector2f startPos;
+        sf::Vector2f endPos;
+        startPos.x = text.getPosition().x + text.findCharacterPos(cursor.selectionStart.second + cursor.getTextOffset()).x;
+        startPos.y = text.getPosition().y + cursor.selectionStart.first * (TEXTSIZE + TEXTSIZE / 3);
+        endPos.x = text.getPosition().x + text.findCharacterPos(cursor.selectionEnd.second + cursor.getTextOffset()).x;
+        endPos.y = text.getPosition().y + cursor.selectionEnd.first * (TEXTSIZE + TEXTSIZE / 3);
+
+        if (startPos.y > endPos.y || (startPos.y == endPos.y && startPos.x > endPos.x))
+            std::swap(startPos, endPos);
+
+        int lineHeight = TEXTSIZE + TEXTSIZE / 3;
+        int startLine = startPos.y / lineHeight;
+        int endLine = endPos.y / lineHeight;
+        for (int line = startLine; line <= endLine; line++) {
+            sf::RectangleShape selectionShape;
+            float y = line * lineHeight;
+            float xStart = (line == startLine ? startPos.x : text.getPosition().x);
+            float xEnd = (line == endLine ? endPos.x : text.getPosition().x + text.getGlobalBounds().width);
+            selectionShape.setPosition(xStart, y);
+            selectionShape.setSize(sf::Vector2f(xEnd - xStart, lineHeight));
+            selectionShape.setFillColor(sf::Color(100, 100, 255, 100));
+            selectionShapes.push_back(selectionShape);
+        }
+    }
 
     // for everything that is not Event::TextEntered
     void handleKeypressed(const sf::Event &e) {
@@ -346,17 +347,21 @@ private:
                 zoom(+1);
             } 
         }
+        /*
         // horizontal scroll
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) {
             if (delta == -1) {
                 text.move(-20, 0);
-                for (auto &sh : selectionShapes) sh.move(-20, 0);
+                // for (auto &sh : selectionShapes) sh.move(-20, 0);
             }
             if (delta == 1 && text.getPosition().x < 0) {
                 text.move(20, 0);
-                for (auto &sh : selectionShapes) sh.move(20, 0);
-            } 
+                // for (auto &sh : selectionShapes) sh.move(20, 0);
+            }
+            updateCursorShape();
+            updateSelectionShapes();
         }
+        */
         // vertical scroll
         else {
             int lineHeight = TEXTSIZE + TEXTSIZE / 3;

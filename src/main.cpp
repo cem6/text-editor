@@ -1,15 +1,16 @@
 #include "window.h"
 #include "filehandling.h"
 
+// ISSUES:
 // leftclick doesnt work after horizontal scroll
 // zooming scrolls ?
+// horizontal scroll moves cursor
 //
-// keyboardSelect() and mouseSelect() in Cursor can be 1 function
-// updateKeyboardSelectionShape() and updateMouseSelectionShape() in Window can be 1 function
-//
+// ???
 // selection cant be modified when shift isnt released (weird behavior in: handleTextEntered() handleKeyPressed())
 // 
-// TODO: move selected, copy / paste, scrollbars
+// TODOTODO: better updateSelectionShapes logic (get start only once, stick to chars (mouse), ...)
+// TODO: move selected, copy / paste, line break, scrollbars 
 
 int main() {
     Filehandling file("readme.txt");
@@ -20,6 +21,6 @@ int main() {
         window.render();
     }
 
-    file.updateFile();
+    // file.updateFile();
     return 0;
 }
