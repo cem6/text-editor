@@ -4,6 +4,7 @@
 #include "settings.h"
 #include <iostream>
 #include "cursor.h"
+#include "filehandling.h"
 
 class Window {
 private:
@@ -20,6 +21,7 @@ private:
 
 public:
     sf::RenderWindow self;
+    Filehandling *file;
 
     Window() {
         self.create(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "sfml fenster", sf::Style::Default);
@@ -253,7 +255,9 @@ private:
 
         // input with mod keys (can best be handled in here bc = and - are are Event::TextEntered)
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
+            // std::cout << "ctrl pressed " << static_cast<int>(c) << '\n';
             switch (c) {
+                case 19: file->updateFile(); break;
                 case '=': zoom(+1); break;
                 case '-': zoom(-1); break;
                 default: break;
@@ -347,8 +351,7 @@ private:
                 zoom(+1);
             } 
         }
-        /*
-        // horizontal scroll
+        // horizontal scroll !!! breaks cursor !!!
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) {
             if (delta == -1) {
                 text.move(-20, 0);
@@ -361,7 +364,6 @@ private:
             updateCursorShape();
             updateSelectionShapes();
         }
-        */
         // vertical scroll
         else {
             int lineHeight = TEXTSIZE + TEXTSIZE / 3;

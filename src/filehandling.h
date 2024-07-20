@@ -16,9 +16,17 @@ public:
 
     void getFile() {
         std::ifstream instream(path);
+
+        // file cant be opened, propably doesnt exist
         if (!instream.is_open()) {
-            std::cerr << "failed to open file" << std::endl;
-            return;
+            std::cout << "creating new file " + path << std::endl;
+            std::ofstream newFile(path); // create new file
+            instream.close(); 
+            instream.open(path);
+            if (!instream.is_open()) {
+                std::cerr << "failed to open file, aborting" << std::endl;
+                return;
+            }
         }
 
         std::string line;
@@ -34,6 +42,7 @@ public:
     }
 
     void updateFile() {
+        std::cout << "trying to save" << '\n';
         std::ofstream outstream(path);
         if (!outstream.is_open()) {
             std::cerr << "failed to open file" << std::endl;

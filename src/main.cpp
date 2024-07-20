@@ -1,10 +1,12 @@
 #include "window.h"
 #include "filehandling.h"
 
+// cmake --build .
+
 // ISSUES:
 // leftclick doesnt work after horizontal scroll
-// zooming scrolls ?
 // horizontal scroll moves cursor
+// zooming scrolls ?
 // cant execute ./editor whithout arguments
 //
 // ???
@@ -16,12 +18,12 @@
 int main(int argc, char *argv[]) {
     Filehandling file(argv[1]);
     Window window;
+    window.file = &file;
 
     while (window.self.isOpen()) {
         window.handleEvents();
         window.render();
     }
 
-    // file.updateFile();
     return 0;
 }
