@@ -42,7 +42,6 @@ public:
     }
 
     void updateFile() {
-        std::cout << "trying to save" << '\n';
         std::ofstream outstream(path);
         if (!outstream.is_open()) {
             std::cerr << "failed to open file" << std::endl;

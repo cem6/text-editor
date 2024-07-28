@@ -63,14 +63,14 @@ public:
         while (self.pollEvent(e)) {
             if (e.type == sf::Event::Closed) self.close();
             if (e.type == sf::Event::Resized) resizeWindow(e.size.width, e.size.height);
-            
+
             // keyboard
             if (e.type == sf::Event::TextEntered) handleTextEntered(e.text.unicode);
             if (e.type == sf::Event::KeyPressed) handleKeypressed(e);
             // mousewheel
             if (e.type == sf::Event::MouseWheelScrolled && e.mouseWheelScroll.wheel == sf::Mouse::VerticalWheel)
                 handleMousewheel(e.mouseWheelScroll.delta);
-            
+
 
             // leftclick press
             if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left) {
@@ -108,7 +108,7 @@ public:
                 updateSelectionShapes();
                 std::cout << "shift pressed\n";
             }
-            
+
         }
     }
     void render() {
@@ -127,7 +127,7 @@ private:
         // there should always be an extra empty line after the last line
         if (textVec.back() != "")
             textVec.push_back("");
-        
+
         // convert vector to string with '\n'
         std::string s = textVec[0];
         for (int i = 1; i < textVec.size(); i++)
@@ -192,7 +192,7 @@ private:
             selectionShapes.push_back(selectionShape);
         }
     }
-    // TEMP! for doing one updateSelectionShapes() with cursor positions after mouseSelect() to get "stick" to chars effect
+    // TEMP! for doing on updateSelectionShapes() with cursor positions after mouseSelect() to get "stick" to chars effect
     void stickSelectionShapes() {
         selectionShapes.clear();
 
@@ -250,19 +250,19 @@ private:
 
     // for everything that is Event::TextEntered
     void handleTextEntered(char c) {
-        // fix weird shift behavior, maybe 
+        // fix weird shift behavior, maybe
         if (cursor.shift) cursor.shiftReleased(); // ?????????????????????
 
         // input with mod keys (can best be handled in here bc = and - are are Event::TextEntered)
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
             // std::cout << "ctrl pressed " << static_cast<int>(c) << '\n';
             switch (c) {
-                case 19: file->updateFile(); break;
+                case 19: file->updateFile(); break; // s
                 case '=': zoom(+1); break;
                 case '-': zoom(-1); break;
                 default: break;
             }
-            return; // dont want to write c that was pressed with mod key
+            return; // dont want to write char that was pressed with mod key
         }
 
         // check if theres a selection that needs to be deleted before modifying text
@@ -272,7 +272,7 @@ private:
             deletedSelection = true;
         }
 
-        // backspace, (dont want extra backspace after deleting selection (this i propably not a good way to do this))
+        // backspace
         if (c == '\b' && !deletedSelection) {
             // cursor somewhere in line except begin
             if (!textVec[cursor.y].empty() && cursor.x > 0)  {
@@ -287,27 +287,27 @@ private:
             }
         }
         // newline
-        else if (c == '\n' || c == '\r') { 
+        else if (c == '\n' || c == '\r') {
             // cursor at end of line
             if (cursor.x == textVec[cursor.y].size()) {
                 textVec.insert(textVec.begin() + cursor.y + 1, ""); // insert new line after this line
             }
             // cursor in middle of line
             else {
-                textVec.insert(textVec.begin() + cursor.y + 1, textVec[cursor.y].substr(cursor.x)); // insert substring on right of cursor to new line after this line 
+                textVec.insert(textVec.begin() + cursor.y + 1, textVec[cursor.y].substr(cursor.x)); // insert substring on right of cursor to new line after this line
                 textVec[cursor.y] = textVec[cursor.y].substr(0, cursor.x); // remove substring from this line
             }
             cursor.y++;
             cursor.x = 0;
         }
-        // tab
+        // tab, TODO: tab selection
         else if (c == '\t') {
             textVec[cursor.y].insert(cursor.x, "    ");
             cursor.x += 4;
         }
         // char
-        else if (isprint(static_cast<unsigned char>(c))) { 
-            textVec[cursor.y] = textVec[cursor.y].insert(cursor.x++, 1, static_cast<char>(c)); // insert works fine
+        else if (isprint(static_cast<unsigned char>(c))) {
+            /* textVec[cursor.y] = */ textVec[cursor.y].insert(cursor.x++, 1, static_cast<char>(c)); // insert works fine
         }
         updateText();
         updateCursorShape();
@@ -349,7 +349,7 @@ private:
             }
             if (delta == 1) {
                 zoom(+1);
-            } 
+            }
         }
         // horizontal scroll !!! breaks cursor !!!
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) {
