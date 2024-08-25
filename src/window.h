@@ -24,7 +24,7 @@ public:
     Filehandling *file;
 
     Window() {
-        self.create(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "sfml fenster", sf::Style::Default);
+        self.create(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "text-editor", sf::Style::Default);
         view.reset(sf::FloatRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
 
         if (!font.loadFromFile("res/JetBrainsMonoNerdFont-Regular.ttf"))
@@ -302,12 +302,13 @@ private:
         }
         // tab, TODO: tab selection
         else if (c == '\t') {
-            textVec[cursor.y].insert(cursor.x, "    ");
-            cursor.x += 4;
+			// tab deletes selection, das ist natuerlich zu 100% so gewollt
+            textVec[cursor.y].insert(cursor.x, "\t");
+            cursor.x++;
         }
         // char
         else if (isprint(static_cast<unsigned char>(c))) {
-            /* textVec[cursor.y] = */ textVec[cursor.y].insert(cursor.x++, 1, static_cast<char>(c)); // insert works fine
+            textVec[cursor.y].insert(cursor.x++, 1, static_cast<char>(c)); // insert works fine
         }
         updateText();
         updateCursorShape();

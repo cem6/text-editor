@@ -17,3 +17,8 @@ target_link_libraries(editor
         sfml-window 
         sfml-system
 )
+
+set_target_properties(editor
+	PROPERTIES
+		OUTPUT_NAME "out"
+)
